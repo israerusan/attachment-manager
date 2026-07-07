@@ -1,0 +1,541 @@
+/* Attachment Manager — all styling lives here (no inline JS styles, per Obsidian review).
+   Everything is built on Obsidian CSS variables so it adapts to the active theme,
+   light or dark, and to the user's interface-font size. */
+
+.attachment-manager-view {
+  padding: var(--size-4-3);
+  font-size: var(--font-ui-small);
+}
+
+/* Explicit keyboard focus ring — our custom buttons strip native chrome, so give
+   them a visible focus indicator that doesn't depend on theme cascade luck. */
+.attachment-manager-row-title:focus-visible,
+.attachment-manager-tile:focus-visible,
+.attachment-manager-icon-btn:focus-visible,
+.attachment-manager-inline-link:focus-visible,
+.attachment-manager-cta-dismiss:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+  border-radius: var(--radius-s);
+}
+
+.attachment-manager-header {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--size-4-2);
+}
+
+.attachment-manager-header h2 {
+  margin: 0;
+  margin-right: auto;
+  font-size: var(--font-ui-large);
+}
+
+.attachment-manager-summary {
+  color: var(--text-muted);
+  margin-bottom: var(--size-4-3);
+}
+
+.attachment-manager-toolbar,
+.attachment-manager-bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--size-4-2);
+}
+
+.attachment-manager-bulk-bar {
+  padding: var(--size-4-2);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+}
+
+/* Results list */
+
+.attachment-manager-results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-2);
+}
+
+.attachment-manager-row {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  padding: var(--size-2-3) var(--size-4-2);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-primary);
+}
+
+.attachment-manager-row:hover {
+  background: var(--background-modifier-hover);
+}
+
+.attachment-manager-row.is-reviewed {
+  opacity: 0.55;
+}
+
+.attachment-manager-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1);
+  min-width: 0;
+  flex: 1;
+}
+
+.attachment-manager-row-title {
+  /* A focusable button styled as a link (keyboard-operable, no button chrome). */
+  appearance: none;
+  border: none;
+  background: none;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  text-align: left;
+  color: var(--text-normal);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.attachment-manager-row-title:hover {
+  color: var(--text-accent);
+  text-decoration: underline;
+}
+
+.attachment-manager-row-reason {
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-manager-row-actions {
+  display: flex;
+  gap: var(--size-2-1);
+  flex-shrink: 0;
+}
+
+.attachment-manager-icon-btn {
+  appearance: none;
+  border: none;
+  background: none;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--size-2-1);
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.attachment-manager-icon-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+/* The destructive "ignore" action is set apart (gap + a faint danger tint at rest)
+   and turns solid danger on hover, so it never reads like the benign reviewed
+   toggle right next to it. */
+.attachment-manager-icon-btn.is-danger {
+  margin-left: var(--size-4-1);
+  color: var(--text-error);
+  opacity: 0.75;
+}
+
+.attachment-manager-icon-btn.is-danger:hover {
+  opacity: 1;
+  background: var(--background-modifier-error);
+  color: var(--text-on-accent);
+}
+
+/* Issue-type badge */
+
+/* Type badge is neutral so it doesn't compete with the severity chip's color —
+   exactly one channel (severity) carries saturated hue. Type reads from its label. */
+.attachment-manager-badge {
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 8em;
+  padding: var(--size-2-1) var(--size-4-1);
+  border-radius: var(--radius-s);
+  font-size: var(--font-ui-smaller);
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  border: 1px solid var(--background-modifier-border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Keep the note title readable in the narrow sidebar even next to a badge. */
+.attachment-manager-row-main {
+  min-width: 6em;
+}
+
+.attachment-manager-empty {
+  color: var(--text-muted);
+  padding: var(--size-4-4) 0;
+  text-align: center;
+}
+
+/* Pro surfaces */
+
+.attachment-manager-pro-pill {
+  margin-left: var(--size-4-2);
+  padding: 0 var(--size-4-1);
+  border-radius: var(--radius-s);
+  font-size: var(--font-ui-smaller);
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  vertical-align: middle;
+}
+
+.attachment-manager-locked {
+  opacity: 0.9;
+}
+
+.attachment-manager-pro-cta {
+  margin-top: var(--size-4-4);
+  padding: var(--size-4-3);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-2);
+  align-items: flex-start;
+}
+
+/* Anchor styled as a button (external links routed by Obsidian). */
+.attachment-manager-external-btn,
+a.attachment-manager-cta-link {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--size-2-2) var(--size-4-3);
+  border-radius: var(--radius-s);
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  font-size: var(--font-ui-small);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.attachment-manager-external-btn:hover,
+a.attachment-manager-cta-link:hover {
+  background: var(--interactive-accent-hover);
+  color: var(--text-on-accent);
+  text-decoration: none;
+}
+
+/* First-run onboarding */
+
+.attachment-manager-onboarding {
+  margin-top: var(--size-4-3);
+  padding: var(--size-4-4);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+}
+
+.attachment-manager-onboarding h3 {
+  margin: 0 0 var(--size-2-2);
+}
+
+.attachment-manager-onboarding-blurb {
+  color: var(--text-muted);
+  margin-bottom: var(--size-2-3);
+  line-height: var(--line-height-normal);
+}
+
+.attachment-manager-onboarding-hint {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  margin-bottom: var(--size-4-3);
+}
+
+/* Determinate scan progress */
+
+.attachment-manager-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--background-modifier-border);
+  overflow: hidden;
+  margin-top: var(--size-2-2);
+}
+
+.attachment-manager-progress-bar {
+  height: 100%;
+  width: 0;
+  background: var(--interactive-accent);
+  transition: width 0.15s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attachment-manager-progress-bar {
+    transition: none;
+  }
+}
+
+/* Contextual "add required properties" nudge */
+.attachment-manager-nudge {
+  margin-top: var(--size-4-2);
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+/* Pro upsell modal */
+.attachment-manager-upsell-lead {
+  margin-bottom: var(--size-2-2);
+}
+
+.attachment-manager-upsell-sub {
+  color: var(--text-muted);
+  margin-bottom: var(--size-4-3);
+}
+
+.attachment-manager-upsell-actions {
+  display: flex;
+  gap: var(--size-4-2);
+  align-items: center;
+}
+
+/* Windowed results: "show more" footer */
+
+.attachment-manager-results-footer {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--size-4-2);
+}
+
+.attachment-manager-results-footer:empty {
+  margin-top: 0;
+}
+
+/* Header stat + category tiles */
+
+.attachment-manager-meta {
+  margin-bottom: var(--size-4-3);
+}
+
+.attachment-manager-stat {
+  display: flex;
+  align-items: baseline;
+  gap: var(--size-2-2);
+}
+
+.attachment-manager-stat-num {
+  font-size: 2em;
+  font-weight: var(--font-bold);
+  line-height: 1;
+  color: var(--text-normal);
+}
+
+.attachment-manager-stat-label {
+  color: var(--text-muted);
+}
+
+.attachment-manager-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2-2);
+  margin-top: var(--size-4-2);
+}
+
+.attachment-manager-tile {
+  appearance: none;
+  box-shadow: none;
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 4.5em;
+  padding: var(--size-2-2) var(--size-4-2);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+  cursor: pointer;
+}
+
+button.attachment-manager-tile:hover {
+  background: var(--background-modifier-hover);
+}
+
+.attachment-manager-tile.is-static {
+  cursor: default;
+}
+
+.attachment-manager-tile.is-active {
+  border-color: var(--interactive-accent);
+  background: var(--background-modifier-hover);
+}
+
+.attachment-manager-tile-count {
+  font-size: var(--font-ui-large);
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+}
+
+.attachment-manager-tile-label {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Severity tier chip (letter + color, so it's legible without relying on hue) */
+
+.attachment-manager-sev {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.3em;
+  height: 1.3em;
+  border-radius: var(--radius-s);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-bold);
+  /* Saturated fill with a contrast-correct label (dark on the light orange, light
+     on the dark red). The H/M/L letter is the non-color channel, so the tier still
+     reads without relying on hue. --color-* are saturated in both light and dark. */
+  color: #fff;
+}
+
+.attachment-manager-sev.is-high { background: var(--color-red); }
+.attachment-manager-sev.is-med { background: var(--color-orange); color: #1a1a1a; }
+.attachment-manager-sev.is-low { background: var(--background-modifier-border); color: var(--text-normal); }
+
+.attachment-manager-row-folder {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-manager-review-legend {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  margin: var(--size-4-2) 0;
+}
+
+.attachment-manager-inline-link {
+  appearance: none;
+  border: none;
+  background: none;
+  box-shadow: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  color: var(--text-accent);
+  text-decoration: underline;
+}
+
+.attachment-manager-icon-btn.is-active {
+  color: var(--text-success);
+}
+
+/* Review queue modal */
+
+.attachment-manager-review-count {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.attachment-manager-review-header {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  margin-top: var(--size-2-2);
+}
+
+.attachment-manager-reviewed-tag {
+  color: var(--text-success);
+  font-size: var(--font-ui-smaller);
+}
+
+.attachment-manager-review-title {
+  margin: var(--size-4-2) 0 var(--size-2-2);
+}
+
+.attachment-manager-review-reason {
+  color: var(--text-normal);
+  margin-bottom: var(--size-2-2);
+}
+
+.attachment-manager-review-path {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  margin-bottom: var(--size-4-3);
+}
+
+.attachment-manager-review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2-2);
+  margin-bottom: var(--size-4-3);
+}
+
+.attachment-manager-review-action {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2-2);
+}
+
+.attachment-manager-review-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--size-4-2);
+}
+
+.attachment-manager-legend {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  margin-top: var(--size-2-2);
+}
+
+.attachment-manager-pro-cta {
+  position: relative;
+}
+
+.attachment-manager-cta-dismiss {
+  appearance: none;
+  border: none;
+  background: none;
+  box-shadow: none;
+  position: absolute;
+  top: var(--size-2-1);
+  right: var(--size-2-2);
+  padding: 0 var(--size-2-2);
+  font-size: var(--font-ui-medium);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.attachment-manager-header-upsell {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-accent);
+}
+
+/* Reclaimable-space banner — the headline metric, given prominence. */
+.attachment-manager-reclaim {
+  margin-top: var(--size-2-2);
+  font-weight: var(--font-semibold);
+  color: var(--text-success);
+}
+
+/* Confirm modal body (destructive actions) */
+.attachment-manager-confirm-body {
+  margin-bottom: var(--size-4-3);
+  line-height: var(--line-height-normal);
+  color: var(--text-normal);
+}

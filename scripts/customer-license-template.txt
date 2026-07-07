@@ -1,0 +1,29 @@
+Subject: Your Attachment Manager Pro license key
+
+Hi there,
+
+Thanks for buying Attachment Manager Pro! Here is your license key:
+
+{{LICENSE_KEY}}
+
+To activate:
+
+1. In Obsidian, open Settings → Community plugins → Attachment Manager.
+2. Scroll to the "Pro license" section.
+3. Paste the key into the "License key" field and click Validate.
+4. You'll see "Attachment Manager Pro unlocked" and all Pro features turn on immediately.
+
+Your key works completely offline — no account, no sign-in, no server checks.
+Keep this email; you can re-enter the key on any device where you use this vault.
+
+Pro unlocks:
+- Safe bulk actions: trash unused files, trash duplicate copies, and move files to your attachment folder (links are preserved)
+- Saved scan profiles (reusable audits like Monthly Cleanup)
+- Custom rules for your own vault structure (by extension, size, folder, name, or age)
+- Severity tuning
+- Markdown report export
+
+If anything doesn't work, just reply to this email and I'll sort it out.
+
+Thanks again,
+Israel

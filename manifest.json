@@ -1,0 +1,11 @@
+{
+  "id": "attachment-manager",
+  "name": "Attachment Manager",
+  "version": "1.0.0",
+  "minAppVersion": "1.5.7",
+  "description": "Clean up your vault and reclaim storage: find unused attachments, duplicate files, oversized images, and auto-named pasted screenshots, then safely trash, move, or rename them.",
+  "author": "Israel Avila",
+  "authorUrl": "https://github.com/israerusan",
+  "fundingUrl": "https://buymeacoffee.com/attachmentmanager",
+  "isDesktopOnly": false
+}
