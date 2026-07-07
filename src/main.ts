@@ -1,5 +1,6 @@
 import {
   App,
+  type EventRef,
   FuzzySuggestModal,
   Notice,
   Platform,
@@ -28,7 +29,8 @@ import { formatBytes } from "./core/utils/sizes";
 import { moveTargetPath, uniquePath, dirName, splitExtension, joinPath } from "./core/paths/pathRewrite";
 import { LicenseManager } from "./core/license/LicenseManager";
 import { requirePro } from "./ui/pro/ProGate";
-import { PRODUCT_NAME, REPORT_FOLDER } from "./product";
+import { ProUpsellModal } from "./ui/pro/ProUpsellModal";
+import { PRODUCT_NAME, REPORT_FOLDER, REVIEW_URL } from "./product";
 
 /** Obsidian's internal command runner — not in the public typings. */
 interface CommandsApi {
@@ -69,6 +71,8 @@ export default class AttachmentManagerPlugin extends Plugin {
   private settleTimer: number | null = null;
   /** Resolver for the in-flight settle wait, so a superseded wait can't hang. */
   private settleResolve: (() => void) | null = null;
+  /** One-shot metadata-cache "resolved" listener used while settling. */
+  private settleEvtRef: EventRef | null = null;
   private refreshTimer: number | null = null;
   private rescanQueued = false;
   private queuedProfileId?: string;
@@ -182,14 +186,7 @@ export default class AttachmentManagerPlugin extends Plugin {
 
   onunload(): void {
     this.flushPendingSave();
-    if (this.settleTimer !== null) {
-      window.clearTimeout(this.settleTimer);
-      this.settleTimer = null;
-    }
-    if (this.settleResolve) {
-      this.settleResolve();
-      this.settleResolve = null;
-    }
+    this.finishSettle();
     if (this.refreshTimer !== null) {
       window.clearTimeout(this.refreshTimer);
       this.refreshTimer = null;
@@ -603,9 +600,14 @@ export default class AttachmentManagerPlugin extends Plugin {
    * still be in the scan's two-signal unused set. Trash obeys the user's "Deleted
    * files" setting.
    */
-  async bulkTrashUnused(issues: AttachmentIssue[]): Promise<string[]> {
+  async bulkTrashUnused(issues: AttachmentIssue[], single = false): Promise<string[]> {
+    if (this.scanning) {
+      new Notice(`${PRODUCT_NAME}: a scan is running — try again in a moment.`);
+      return [];
+    }
     const inbound = this.inboundMap();
     const unused = this.unusedPathSet();
+    const bytesByPath = new Map(issues.map((i) => [i.attachmentPath, i.sizeBytes]));
     const trashed: string[] = [];
     let skipped = 0;
     let failed = 0;
@@ -622,7 +624,9 @@ export default class AttachmentManagerPlugin extends Plugin {
         failed++;
       }
     }
-    this.reportBulk("Trashed", trashed.length, skipped, failed);
+    const reclaimed = trashed.reduce((s, p) => s + (bytesByPath.get(p) ?? 0), 0);
+    this.reportBulk("Trashed", trashed.length, skipped, failed, reclaimed);
+    await this.recordTrashOutcome(trashed.length, reclaimed, single);
     return trashed;
   }
 
@@ -634,8 +638,13 @@ export default class AttachmentManagerPlugin extends Plugin {
    * At least one copy of every cluster is always kept.
    */
   async bulkTrashDuplicateCopies(selected: AttachmentIssue[]): Promise<string[]> {
+    if (this.scanning) {
+      new Notice(`${PRODUCT_NAME}: a scan is running — try again in a moment.`);
+      return [];
+    }
     const inbound = this.inboundMap();
     const unused = this.unusedPathSet();
+    const bytesByPath = new Map(selected.map((i) => [i.attachmentPath, i.sizeBytes]));
     // Full cluster membership from the last scan, so "keep one" counts every copy.
     const membersByCluster = new Map<string, string[]>();
     for (const i of this.lastResult?.issues ?? []) {
@@ -687,7 +696,9 @@ export default class AttachmentManagerPlugin extends Plugin {
         failed++;
       }
     }
-    this.reportBulk("Trashed", trashed.length, skipped, failed);
+    const reclaimed = trashed.reduce((s, p) => s + (bytesByPath.get(p) ?? 0), 0);
+    this.reportBulk("Trashed", trashed.length, skipped, failed, reclaimed);
+    await this.recordTrashOutcome(trashed.length, reclaimed, false);
     return trashed;
   }
 
@@ -699,6 +710,10 @@ export default class AttachmentManagerPlugin extends Plugin {
    * suffix; a file already in place is skipped.
    */
   async bulkMoveToAttachmentFolder(issues: AttachmentIssue[]): Promise<string[]> {
+    if (this.scanning) {
+      new Notice(`${PRODUCT_NAME}: a scan is running — try again in a moment.`);
+      return [];
+    }
     const folder = this.settings.attachmentFolder.trim();
     if (!folder) {
       new Notice(`${PRODUCT_NAME}: set an attachment folder in settings first.`);
@@ -741,6 +756,10 @@ export default class AttachmentManagerPlugin extends Plugin {
    * Returns the new path, or null if it couldn't rename.
    */
   async renameAttachment(path: string, newBasename: string): Promise<string | null> {
+    if (this.scanning) {
+      new Notice(`${PRODUCT_NAME}: a scan is running — try again in a moment.`);
+      return null;
+    }
     const clean = newBasename.trim().replace(/[\\/:*?"<>|]/g, "");
     if (!clean) {
       new Notice(`${PRODUCT_NAME}: enter a valid name.`);
@@ -753,6 +772,12 @@ export default class AttachmentManagerPlugin extends Plugin {
     const desired = joinPath(dirName(path), fileName);
     if (desired === path) return path;
     const target = uniquePath(desired, (p) => this.app.vault.getAbstractFileByPath(p) !== null);
+    // Never rename onto an existing file (mirrors the move guard) — uniquePath can
+    // return a colliding path only in the pathological exhaustion case.
+    if (this.app.vault.getAbstractFileByPath(target)) {
+      new Notice(`${PRODUCT_NAME}: a file named "${attachmentBaseName(target)}" already exists.`);
+      return null;
+    }
     try {
       await this.app.fileManager.renameFile(file, target);
       new Notice(`${PRODUCT_NAME}: renamed to ${attachmentBaseName(target)}.`);
@@ -780,38 +805,111 @@ export default class AttachmentManagerPlugin extends Plugin {
     if (opt === "none") return "Your 'Deleted files' setting is 'Permanently delete', so this cannot be undone.";
     if (opt === "local") return "They go to the vault's .trash folder and can be restored.";
     if (opt === "system") return "They go to your system trash and can be restored.";
-    return "They go to Obsidian's configured trash (see the 'Deleted files' setting).";
+    // Unknown/older API: don't promise recoverability — point at the setting.
+    return "They go to Obsidian's configured trash — check your 'Deleted files' setting, as it may not be reversible.";
   }
 
-  private reportBulk(verb: string, done: number, skipped: number, failed: number): void {
+  private reportBulk(verb: string, done: number, skipped: number, failed: number, bytes = 0): void {
+    // Reinforce the reclaimed space on a successful trash — the product's payoff
+    // moment. Other verbs keep the plain report.
+    if (verb === "Trashed" && done > 0) {
+      const extra: string[] = [];
+      if (skipped > 0) extra.push(`${skipped} skipped`);
+      if (failed > 0) extra.push(`${failed} failed — see console`);
+      const tail = extra.length ? ` (${extra.join(", ")})` : "";
+      const space = bytes > 0 ? `Reclaimed ${formatBytes(bytes)} — ` : "";
+      new Notice(`${PRODUCT_NAME}: ♻ ${space}${done} file${done === 1 ? "" : "s"} moved to trash${tail}.`);
+      return;
+    }
     const parts = [`${verb.toLowerCase()} ${done} file(s)`];
     if (skipped > 0) parts.push(`${skipped} skipped`);
     if (failed > 0) parts.push(`${failed} failed — see console`);
     new Notice(`${PRODUCT_NAME}: ${parts.join(", ")}.`);
   }
 
+  /**
+   * Track reclaim progress and surface two well-timed, once-only, non-blocking
+   * nudges: a bulk-Pro offer after the user has trashed several files one at a
+   * time, and a review ask after they've reclaimed a meaningful amount.
+   */
+  private async recordTrashOutcome(count: number, bytes: number, single: boolean): Promise<void> {
+    if (count <= 0) return;
+    this.settings.reclaimedTotalBytes += bytes;
+    if (single) this.settings.singleTrashCount += count;
+    await this.saveSettings();
+
+    // Behavioral bulk upsell: they're doing Pro's job by hand. Offer once.
+    if (
+      single &&
+      !this.isPro &&
+      !this.settings.proCtaDismissed &&
+      this.settings.singleTrashCount >= 3 &&
+      this.settings.singleTrashCount - count < 3
+    ) {
+      const frag = createFragment((f) => {
+        f.appendText("You've trashed several files one at a time. ");
+        const a = f.createEl("a", {
+          text: "Clear every unused file in one click with Pro →",
+          cls: "attachment-manager-inline-link",
+        });
+        a.addEventListener("click", () =>
+          new ProUpsellModal(
+            this.app,
+            "bulk",
+            "Pro clears every unused file — plus dedupe, move, and rename — in one click. $9 one-time, no subscription."
+          ).open()
+        );
+      });
+      new Notice(frag, 8000);
+      return;
+    }
+
+    // One-time review ask after real value (helps discovery for a $9 product).
+    if (!this.settings.reviewAsked && this.settings.reclaimedTotalBytes >= 100 * 1024 * 1024) {
+      this.settings.reviewAsked = true;
+      await this.saveSettings();
+      const frag = createFragment((f) => {
+        f.appendText(`♻ You've reclaimed ${formatBytes(this.settings.reclaimedTotalBytes)} with ${PRODUCT_NAME}. `);
+        f.createEl("a", { text: "Leave a ⭐ on GitHub", href: REVIEW_URL, cls: "attachment-manager-inline-link" });
+      });
+      new Notice(frag, 10000);
+    }
+  }
+
   async settleCacheThenRescan(paths: string[]): Promise<void> {
     if (paths.length > 0) {
-      // A rapid second call supersedes the first: cancel its timer AND resolve its
-      // pending wait, so the earlier await unblocks instead of hanging forever.
-      if (this.settleTimer !== null) {
-        window.clearTimeout(this.settleTimer);
-        this.settleTimer = null;
-      }
-      if (this.settleResolve) {
-        this.settleResolve();
-        this.settleResolve = null;
-      }
+      this.finishSettle(); // supersede any in-flight wait (resolves it, no hang)
       await new Promise<void>((resolve) => {
         this.settleResolve = resolve;
-        this.settleTimer = window.setTimeout(() => {
-          this.settleTimer = null;
-          this.settleResolve = null;
-          resolve();
-        }, 500);
+        // Rescan right after Obsidian finishes re-resolving links, with a short
+        // floor (let the writes flush) and a ceiling (never hang the UI) — more
+        // reliable than a blind fixed delay on large vaults.
+        let floorPassed = false;
+        window.setTimeout(() => {
+          floorPassed = true;
+        }, 300);
+        this.settleEvtRef = this.app.metadataCache.on("resolved", () => {
+          if (floorPassed) this.finishSettle();
+        });
+        this.settleTimer = window.setTimeout(() => this.finishSettle(), 2500);
       });
     }
     await this.runScan(this.lastResult?.profileId);
+  }
+
+  /** Resolve and tear down the in-flight settle wait (idempotent). */
+  private finishSettle(): void {
+    if (this.settleTimer !== null) {
+      window.clearTimeout(this.settleTimer);
+      this.settleTimer = null;
+    }
+    if (this.settleEvtRef) {
+      this.app.metadataCache.offref(this.settleEvtRef);
+      this.settleEvtRef = null;
+    }
+    const r = this.settleResolve;
+    this.settleResolve = null;
+    if (r) r();
   }
 
   queueSave(): void {

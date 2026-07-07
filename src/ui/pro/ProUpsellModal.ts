@@ -1,5 +1,11 @@
 import { App, Modal, Notice } from "obsidian";
-import { PRO_NAME, PRO_PRICE_LABEL, PRO_TAGLINE, PRO_UPSELL, PURCHASE_URL } from "../../product";
+import { PRODUCT_ID, PRO_NAME, PRO_PRICE_LABEL, PRO_TAGLINE, PRO_UPSELL, PURCHASE_URL } from "../../product";
+
+/** Obsidian's settings opener — not in the public typings. */
+interface SettingApi {
+  open?: () => void;
+  openTabById?: (id: string) => void;
+}
 
 /**
  * An actionable upsell shown the moment a free user reaches for a Pro feature:
@@ -39,8 +45,15 @@ export class ProUpsellModal extends Modal {
     const haveKey = actions.createEl("button", { text: "I have a license key" });
     haveKey.addEventListener("click", () => {
       this.close();
-      // Plain instruction instead of a private-API jump into settings.
-      new Notice("Open Settings → Community plugins → Attachment Manager → Pro license and paste your key.");
+      // Jump straight to our settings tab so activation is one paste away; fall
+      // back to a plain instruction if the (internal) settings API isn't available.
+      const setting = (this.app as unknown as { setting?: SettingApi }).setting;
+      try {
+        setting?.open?.();
+        setting?.openTabById?.(PRODUCT_ID);
+      } catch {
+        new Notice("Open Settings → Community plugins → Attachment Manager → Pro license and paste your key.");
+      }
     });
   }
 

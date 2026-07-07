@@ -35,6 +35,9 @@ export const DEFAULT_SETTINGS: AttachmentManagerSettings = {
   customRules: [],
   onboardingDismissed: false,
   proCtaDismissed: false,
+  singleTrashCount: 0,
+  reclaimedTotalBytes: 0,
+  reviewAsked: false,
 };
 
 /** Split a comma/newline separated field into trimmed, non-empty entries. */
@@ -287,6 +290,9 @@ export class AttachmentManagerSettingTab extends PluginSettingTab {
       cls: "attachment-manager-external-btn",
       href: PURCHASE_URL,
     });
+    actions.setDesc(
+      "One-time $9 — no account, no subscription. Your key works offline and unlocks every Pro feature on this device."
+    );
   }
 
   // --- Pro: severity tuning -------------------------------------------------

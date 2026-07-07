@@ -181,6 +181,13 @@ export interface AttachmentManagerSettings {
   onboardingDismissed: boolean;
   /** Whether the free user dismissed the persistent Pro CTA card. */
   proCtaDismissed: boolean;
+
+  /** How many files the user has trashed one at a time (drives a bulk-Pro nudge). */
+  singleTrashCount: number;
+  /** Cumulative bytes reclaimed via trashing (drives a one-time review ask). */
+  reclaimedTotalBytes: number;
+  /** Whether we've already asked this user for a review (never re-ask). */
+  reviewAsked: boolean;
 }
 
 /** Just the knobs a scan needs; a profile can override these at run time. */

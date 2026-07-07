@@ -27,6 +27,7 @@ export class AttachmentManagerView extends ItemView {
   private progressEl: HTMLElement | null = null;
   private selCountEl: HTMLElement | null = null;
   private resultsEl: HTMLElement | null = null;
+  private selectAllBtn: HTMLButtonElement | null = null;
   private bulkActionButtons: HTMLButtonElement[] = [];
   private lastSyncedScanAt: string | null = null;
   private sortCacheMode: SortMode | null = null;
@@ -80,6 +81,7 @@ export class AttachmentManagerView extends ItemView {
     this.progressEl = null;
     this.selCountEl = null;
     this.resultsEl = null;
+    this.selectAllBtn = null;
 
     this.renderHeader(root);
 
@@ -134,7 +136,10 @@ export class AttachmentManagerView extends ItemView {
         selected: this.selected,
         showBadge: this.filter === "all",
         onSelectionChange: () => this.updateSelCount(),
-        onCountsChanged: () => this.refreshMeta(),
+        // A full re-render after an inline mutation keeps the meta counts, the
+        // filtered empty-state, the filter fallback, and the bulk selection all
+        // consistent — partial refreshes drifted out of sync.
+        onCountsChanged: () => this.render(),
       });
     }
 
@@ -342,12 +347,14 @@ export class AttachmentManagerView extends ItemView {
     this.render();
   }
 
-  private refreshMeta(): void {
-    if (this.metaEl) this.renderMeta(this.plugin.visibleIssues());
-  }
-
   private updateSelCount(): void {
     if (this.selCountEl) this.selCountEl.setText(`${this.selected.size} selected`);
+    // Keep the select-all/none label truthful even when rows are toggled directly.
+    if (this.selectAllBtn) {
+      const shown = this.applyView();
+      const allSelected = shown.length > 0 && shown.every((i) => this.selected.has(i.id));
+      this.selectAllBtn.setText(allSelected ? "Select none" : "Select all");
+    }
     this.updateBulkEnabled();
   }
 
@@ -417,6 +424,7 @@ export class AttachmentManagerView extends ItemView {
     const selectAll = bar.createEl("button", {
       text: startAllSelected ? "Select none" : "Select all",
     });
+    this.selectAllBtn = selectAll;
     selectAll.addEventListener("click", () => {
       const nowAll = shown.length > 0 && shown.every((i) => this.selected.has(i.id));
       if (nowAll) shown.forEach((i) => this.selected.delete(i.id));

@@ -152,10 +152,11 @@ function renderRow(
       () => {
         plugin.confirmDestructive(
           "Trash unused attachment",
-          `Move "${issue.attachmentName}" to trash, freeing ${formatBytes(issue.sizeBytes)}? ${plugin.trashDestinationNote()}`,
+          `No note links to or mentions "${issue.attachmentName}", so removing it won't break anything. ` +
+            `Move it to trash, freeing ${formatBytes(issue.sizeBytes)}? ${plugin.trashDestinationNote()}`,
           "Trash file",
           () =>
-            void plugin.bulkTrashUnused([issue]).then((c) => {
+            void plugin.bulkTrashUnused([issue], true).then((c) => {
               if (c.length) void plugin.settleCacheThenRescan(c);
             })
         );

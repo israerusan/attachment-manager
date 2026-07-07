@@ -13,6 +13,9 @@ export const PRO_NAME = "Attachment Manager Pro";
 /** Where "Unlock Pro" sends people. Confirm the real handle before release. */
 export const PURCHASE_URL = "https://buymeacoffee.com/attachmentmanager";
 
+/** Where a happy user can leave a star/review (helps discovery). */
+export const REVIEW_URL = "https://github.com/israerusan/attachment-manager";
+
 /** One-time price. Kept in one place so every surface stays consistent. */
 export const PRO_PRICE_LABEL = "$9 one-time";
 

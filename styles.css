@@ -178,11 +178,6 @@
   text-overflow: ellipsis;
 }
 
-/* Keep the note title readable in the narrow sidebar even next to a badge. */
-.attachment-manager-row-main {
-  min-width: 6em;
-}
-
 .attachment-manager-empty {
   color: var(--text-muted);
   padding: var(--size-4-4) 0;
