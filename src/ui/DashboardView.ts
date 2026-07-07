@@ -14,7 +14,7 @@ export const VIEW_TYPE_ATTACHMENT_MANAGER = "attachment-manager-dashboard";
 type Filter = IssueType | "all";
 
 const CHECK_BLURB =
-  "Attachment Manager scans for unused files, duplicates, oversized files, junk names, and misplaced attachments — then helps you reclaim space safely.";
+  "Attachment Manager cross-checks canvas, frontmatter, and HTML before flagging anything unused, so it won't remove a file that's still in use — then helps you reclaim space from unused files, duplicates, oversized files, and junk-named pastes, safely.";
 
 export class AttachmentManagerView extends ItemView {
   private filter: Filter = "all";
@@ -136,10 +136,7 @@ export class AttachmentManagerView extends ItemView {
         selected: this.selected,
         showBadge: this.filter === "all",
         onSelectionChange: () => this.updateSelCount(),
-        // A full re-render after an inline mutation keeps the meta counts, the
-        // filtered empty-state, the filter fallback, and the bulk selection all
-        // consistent — partial refreshes drifted out of sync.
-        onCountsChanged: () => this.render(),
+        onCountsChanged: () => this.handleRowMutation(),
       });
     }
 
@@ -167,6 +164,7 @@ export class AttachmentManagerView extends ItemView {
     const profiles = this.plugin.settings.savedProfiles;
     if (this.plugin.isPro && profiles.length > 0) {
       const select = header.createEl("select", { cls: "dropdown attachment-manager-profile-select" });
+      select.setAttribute("aria-label", "Run a saved scan profile");
       select.createEl("option", { text: "Run a profile…", value: "" });
       for (const p of profiles) select.createEl("option", { text: p.name, value: p.id });
       const activeId = this.plugin.lastResult?.profileId;
@@ -347,6 +345,26 @@ export class AttachmentManagerView extends ItemView {
     this.render();
   }
 
+  /**
+   * Cheap update after an inline row action removed its own row: prune any
+   * now-invisible selection, refresh the meta counts, and only pay for a full
+   * re-render when the visible list emptied (to show the empty state / reset the
+   * filter). Avoids rebuilding all rows — and collapsing "show more" — per click.
+   */
+  private handleRowMutation(): void {
+    const visible = this.applyView();
+    if (this.selected.size > 0) {
+      const visibleIds = new Set(visible.map((i) => i.id));
+      for (const id of this.selected) if (!visibleIds.has(id)) this.selected.delete(id);
+    }
+    if (visible.length === 0) {
+      this.render();
+      return;
+    }
+    if (this.metaEl) this.renderMeta(this.plugin.visibleIssues());
+    this.updateSelCount();
+  }
+
   private updateSelCount(): void {
     if (this.selCountEl) this.selCountEl.setText(`${this.selected.size} selected`);
     // Keep the select-all/none label truthful even when rows are toggled directly.
@@ -362,6 +380,7 @@ export class AttachmentManagerView extends ItemView {
     const bar = root.createDiv({ cls: "attachment-manager-toolbar" });
 
     const sort = bar.createEl("select", { cls: "dropdown" });
+    sort.setAttribute("aria-label", "Sort results");
     for (const [value, text] of [
       ["severity", "Sort: severity"],
       ["size", "Sort: size"],

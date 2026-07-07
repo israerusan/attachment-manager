@@ -48,10 +48,10 @@ export class ProUpsellModal extends Modal {
       // Jump straight to our settings tab so activation is one paste away; fall
       // back to a plain instruction if the (internal) settings API isn't available.
       const setting = (this.app as unknown as { setting?: SettingApi }).setting;
-      try {
-        setting?.open?.();
-        setting?.openTabById?.(PRODUCT_ID);
-      } catch {
+      if (setting?.open) {
+        setting.open();
+        setting.openTabById?.(PRODUCT_ID);
+      } else {
         new Notice("Open Settings → Community plugins → Attachment Manager → Pro license and paste your key.");
       }
     });

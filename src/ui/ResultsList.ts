@@ -133,7 +133,7 @@ function renderRow(
       // Match Ignore's undo affordance so an accidental review is recoverable.
       const frag = createFragment((f) => {
         f.appendText(`Marked "${issue.attachmentName}" reviewed. `);
-        const undo = f.createEl("a", { text: "Undo", cls: "attachment-manager-inline-link" });
+        const undo = f.createEl("button", { text: "Undo", cls: "attachment-manager-inline-link" });
         undo.addEventListener("click", () => {
           void plugin.setReviewed(issue, false).then(() => plugin.refreshViews());
         });
@@ -157,7 +157,9 @@ function renderRow(
           "Trash file",
           () =>
             void plugin.bulkTrashUnused([issue], true).then((c) => {
-              if (c.length) void plugin.settleCacheThenRescan(c);
+              // Trashing an unused file changes nothing else — drop it from the
+              // results instantly instead of a full-vault rescan.
+              if (c.length) plugin.handleTrashed(c);
             })
         );
       }
@@ -171,7 +173,7 @@ function renderRow(
       opts.onCountsChanged();
       const frag = createFragment((f) => {
         f.appendText(`Ignored "${issue.attachmentName}". `);
-        const undo = f.createEl("a", { text: "Undo", cls: "attachment-manager-inline-link" });
+        const undo = f.createEl("button", { text: "Undo", cls: "attachment-manager-inline-link" });
         undo.addEventListener("click", () => {
           void plugin.setIgnored(issue, false).then(() => plugin.refreshViews());
         });

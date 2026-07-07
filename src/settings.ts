@@ -4,7 +4,7 @@ import type { AttachmentManagerSettings, IssueType, CustomRule, ScanProfile } fr
 import { ISSUE_TYPES, ISSUE_TYPE_LABELS } from "./types";
 import { DEFAULT_JUNK_NAME_PATTERNS } from "./core/naming/namePatterns";
 import { LicenseManager } from "./core/license/LicenseManager";
-import { PRO_NAME, PRO_TAGLINE, PURCHASE_URL } from "./product";
+import { PRO_NAME, PRO_TAGLINE, PURCHASE_URL, REVIEW_URL } from "./product";
 import { RuleEditModal } from "./ui/RuleEditModal";
 import { ProfileEditModal } from "./ui/ProfileEditModal";
 
@@ -249,6 +249,14 @@ export class AttachmentManagerSettingTab extends PluginSettingTab {
             this.display();
           })
         );
+      const review = new Setting(containerEl)
+        .setName("Enjoying Attachment Manager?")
+        .setDesc("A quick star on GitHub helps other vaults find it.");
+      review.controlEl.createEl("a", {
+        text: "Leave a review",
+        cls: "attachment-manager-external-btn",
+        href: REVIEW_URL,
+      });
       return;
     }
 

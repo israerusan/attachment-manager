@@ -30,7 +30,7 @@ import { moveTargetPath, uniquePath, dirName, splitExtension, joinPath } from ".
 import { LicenseManager } from "./core/license/LicenseManager";
 import { requirePro } from "./ui/pro/ProGate";
 import { ProUpsellModal } from "./ui/pro/ProUpsellModal";
-import { PRODUCT_NAME, REPORT_FOLDER, REVIEW_URL } from "./product";
+import { PRODUCT_NAME, REPORT_FOLDER } from "./product";
 
 /** Obsidian's internal command runner — not in the public typings. */
 interface CommandsApi {
@@ -378,7 +378,7 @@ export default class AttachmentManagerPlugin extends Plugin {
     await this.saveSettings();
     const frag = createFragment((f) => {
       f.appendText(`Excluded "${path}" from future scans. `);
-      const undo = f.createEl("a", { text: "Undo", cls: "attachment-manager-inline-link" });
+      const undo = f.createEl("button", { text: "Undo", cls: "attachment-manager-inline-link" });
       undo.addEventListener("click", () => void this.unexcludeAttachment(path));
     });
     new Notice(frag, 6000);
@@ -848,11 +848,12 @@ export default class AttachmentManagerPlugin extends Plugin {
     ) {
       const frag = createFragment((f) => {
         f.appendText("You've trashed several files one at a time. ");
-        const a = f.createEl("a", {
+        // A <button> (not a bare <a>) so it's keyboard- and screen-reader-operable.
+        const b = f.createEl("button", {
           text: "Clear every unused file in one click with Pro →",
           cls: "attachment-manager-inline-link",
         });
-        a.addEventListener("click", () =>
+        b.addEventListener("click", () =>
           new ProUpsellModal(
             this.app,
             "bulk",
@@ -861,19 +862,20 @@ export default class AttachmentManagerPlugin extends Plugin {
         );
       });
       new Notice(frag, 8000);
-      return;
     }
+  }
 
-    // One-time review ask after real value (helps discovery for a $9 product).
-    if (!this.settings.reviewAsked && this.settings.reclaimedTotalBytes >= 100 * 1024 * 1024) {
-      this.settings.reviewAsked = true;
-      await this.saveSettings();
-      const frag = createFragment((f) => {
-        f.appendText(`♻ You've reclaimed ${formatBytes(this.settings.reclaimedTotalBytes)} with ${PRODUCT_NAME}. `);
-        f.createEl("a", { text: "Leave a ⭐ on GitHub", href: REVIEW_URL, cls: "attachment-manager-inline-link" });
-      });
-      new Notice(frag, 10000);
-    }
+  /**
+   * After trashing files, drop them from the in-memory results and refresh —
+   * WITHOUT a full rescan. Trashing an unused file doesn't change any other file's
+   * status, so a rescan would be a needless multi-second pass on a large vault
+   * (the vault "delete" event also prunes keys). Used for the single-file trash
+   * hot path the free tier encourages.
+   */
+  handleTrashed(paths: string[]): void {
+    let changed = false;
+    for (const p of paths) if (this.dropLastResult(p)) changed = true;
+    if (changed) this.refreshViews();
   }
 
   async settleCacheThenRescan(paths: string[]): Promise<void> {

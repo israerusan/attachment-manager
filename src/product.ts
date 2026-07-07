@@ -19,9 +19,13 @@ export const REVIEW_URL = "https://github.com/israerusan/attachment-manager";
 /** One-time price. Kept in one place so every surface stays consistent. */
 export const PRO_PRICE_LABEL = "$9 one-time";
 
+/** One-line positioning statement — the wedge vs. free attachment tools. */
+export const POSITIONING_LINE =
+  "The Obsidian attachment cleaner safe enough to trust with bulk delete: two-signal unused detection, recoverable trash, and link-safe moves.";
+
 /** One-line pitch for the Pro tier, reused across upsell surfaces. */
 export const PRO_TAGLINE =
-  "Safe bulk cleanup, saved scan profiles, custom rules, and report export. $9 one-time, no subscription, no account.";
+  "One-click safe bulk cleanup — trash, dedupe, and move across many files at once, links kept intact and everything recoverable. Plus saved profiles, custom rules, and report export. $9 one-time, no subscription, no account.";
 
 /** Contextual upsell copy, keyed by the feature the user reached for. */
 export const PRO_UPSELL: Record<string, string> = {
