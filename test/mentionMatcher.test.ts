@@ -5,6 +5,8 @@ import { MentionMatcher, fileNameVariants } from "../src/core/safety/mentionMatc
 assert.deepStrictEqual(fileNameVariants("a b.png"), ["a b.png", "a%20b.png"]);
 assert.deepStrictEqual(fileNameVariants("a&b.png"), ["a&b.png", "a%26b.png"]);
 assert.deepStrictEqual(fileNameVariants("plain.png"), ["plain.png"]);
+// Parentheses get a percent-encoded variant (encodeURIComponent leaves them literal).
+assert.ok(fileNameVariants("chart (1).png").includes("chart%20%281%29.png"));
 
 // Aho-Corasick finds every owner whose pattern occurs anywhere in a source text.
 const m = new MentionMatcher();
@@ -27,5 +29,14 @@ m2.build();
 const h2 = new Set<number>();
 m2.scanInto("cat.png", h2);
 assert.ok(h2.has(0) && h2.has(1), "fail-link output (at.png inside cat.png) is reported");
+
+// Adding a pattern AFTER build() must not silently miss matches (auto-rebuild).
+const m3 = new MentionMatcher();
+m3.addPattern("cat.png", 0);
+m3.build();
+m3.addPattern("at.png", 1);
+const h3 = new Set<number>();
+m3.scanInto("cat.png", h3);
+assert.ok(h3.has(0) && h3.has(1), "pattern added after build() is still matched");
 
 console.log("mentionMatcher tests passed");

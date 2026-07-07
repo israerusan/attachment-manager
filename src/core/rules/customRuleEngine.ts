@@ -10,7 +10,9 @@ export interface CustomRuleHit {
 
 /** True when `path` is the folder itself or lives anywhere beneath it. */
 function isInsideFolder(path: string, folder: string): boolean {
-  const trimmed = folder.trim().replace(/\/+$/, "");
+  // Strip leading AND trailing slashes, matching misplacedDetector so a value like
+  // "/Assets" behaves identically in a rule scope and the misplaced check.
+  const trimmed = folder.trim().replace(/^\/+|\/+$/g, "");
   if (!trimmed) return false;
   return path === trimmed || path.startsWith(`${trimmed}/`);
 }
@@ -53,7 +55,9 @@ function conditionTrue(stat: AttachmentStat, condition: CustomRuleCondition, now
       return isInsideFolder(stat.path, condition.folder);
     case "name-matches": {
       const re = compilePattern(condition.pattern);
-      return re ? re.test(stat.name) : false;
+      // Test the basename (extension stripped), matching the junk-name detector's
+      // convention; cap length so a catastrophic-backtracking pattern can't hang.
+      return re ? re.test(stat.basename.slice(0, 256)) : false;
     }
     case "older-than-days":
       return isOlderThanDays(stat.mtime, condition.days, now);

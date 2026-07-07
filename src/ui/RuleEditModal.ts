@@ -132,13 +132,15 @@ export class RuleEditModal extends Modal {
           ? { type: "extension-is", extension: this.extension.trim().toLowerCase().replace(/^\./, "") }
           : null;
       case "larger-than-kb":
-        return { type: "larger-than-kb", kb: Math.max(0, this.kb) };
+        // Clamp to >= 1 KB; a 0/negative threshold would flag every non-empty file.
+        return { type: "larger-than-kb", kb: Math.max(1, this.kb) };
       case "in-folder":
         return this.folder.trim() ? { type: "in-folder", folder: this.folder.trim() } : null;
       case "name-matches":
         return this.pattern.trim() ? { type: "name-matches", pattern: this.pattern.trim() } : null;
       case "older-than-days":
-        return { type: "older-than-days", days: this.days };
+        // Clamp to >= 1 day; 0/negative would match every non-future file.
+        return { type: "older-than-days", days: Math.max(1, this.days) };
     }
   }
 

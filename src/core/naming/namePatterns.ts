@@ -40,7 +40,8 @@ function compile(pattern: string): RegExp | null {
  * malformed regexes are ignored. Matching is case-insensitive.
  */
 export function matchesJunkName(basename: string, patterns: string[]): boolean {
-  const name = basename.trim();
+  // Cap length so a catastrophic-backtracking user pattern can't hang the scan.
+  const name = basename.trim().slice(0, 256);
   if (!name) return false;
   for (const pattern of patterns) {
     if (!pattern.trim()) continue;

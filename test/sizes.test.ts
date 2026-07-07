@@ -9,6 +9,9 @@ assert.strictEqual(formatBytes(1024), "1 KB");
 assert.strictEqual(formatBytes(1536), "1.5 KB");
 assert.strictEqual(formatBytes(5 * 1024 * 1024), "5 MB");
 assert.strictEqual(formatBytes(1024 * 1024 * 1024), "1 GB");
+// Rounding must carry into the next unit, not read "1024 KB".
+assert.strictEqual(formatBytes(1024 * 1024 - 1), "1 MB");
+assert.strictEqual(formatBytes(1024 * 1024 * 1024 - 1), "1 GB");
 
 assert.strictEqual(kbToBytes(1), 1024);
 assert.strictEqual(kbToBytes(0), 0);

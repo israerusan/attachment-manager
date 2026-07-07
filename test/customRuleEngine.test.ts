@@ -29,9 +29,13 @@ assert.strictEqual(evaluateRule(makeStat({ size: 512 }), rule({ condition: { typ
 assert.notStrictEqual(evaluateRule(makeStat({ path: "old/a.png" }), rule({ condition: { type: "in-folder", folder: "old" } }), NOW), null);
 assert.strictEqual(evaluateRule(makeStat({ path: "new/a.png" }), rule({ condition: { type: "in-folder", folder: "old" } }), NOW), null);
 
-// name-matches (against the full filename); malformed regex is safe.
-assert.notStrictEqual(evaluateRule(makeStat({ name: "scan001.png" }), rule({ condition: { type: "name-matches", pattern: "^scan\\d+" } }), NOW), null);
-assert.strictEqual(evaluateRule(makeStat({ name: "photo.png" }), rule({ condition: { type: "name-matches", pattern: "(" } }), NOW), null);
+// name-matches (against the BASENAME, extension stripped); malformed regex is safe.
+assert.notStrictEqual(evaluateRule(makeStat({ name: "scan001.png", basename: "scan001" }), rule({ condition: { type: "name-matches", pattern: "^scan\\d+" } }), NOW), null);
+// An anchored pattern matches the basename, not the full filename with extension.
+assert.notStrictEqual(evaluateRule(makeStat({ name: "tmp.pdf", basename: "tmp" }), rule({ condition: { type: "name-matches", pattern: "^tmp$" } }), NOW), null);
+assert.strictEqual(evaluateRule(makeStat({ name: "photo.png", basename: "photo" }), rule({ condition: { type: "name-matches", pattern: "(" } }), NOW), null);
+// in-folder tolerates a leading slash (matches misplacedDetector normalization).
+assert.notStrictEqual(evaluateRule(makeStat({ path: "Assets/x.png" }), rule({ condition: { type: "in-folder", folder: "/Assets" } }), NOW), null);
 
 // older-than-days.
 const old = makeStat({ mtime: NOW - 100 * 24 * 3600 * 1000 });

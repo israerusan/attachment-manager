@@ -26,6 +26,9 @@ export class MentionMatcher {
   private built = false;
 
   addPattern(text: string, ownerId: number): void {
+    // Adding after build() would leave the new node's fail links unwired; force a
+    // rebuild so a late pattern can never be silently missed.
+    this.built = false;
     const t = text.toLowerCase();
     if (!t) return;
     let node = 0;
@@ -97,5 +100,12 @@ export function fileNameVariants(fileName: string): string[] {
     encoded = raw;
   }
   if (encoded !== raw) variants.push(encoded);
+  // encodeURIComponent leaves parentheses (and a few others) literal, but URLs
+  // often encode them — add a variant with () percent-encoded so an HTML/CSS src
+  // like "photo%20%281%29.png" still suppresses the unused flag.
+  const parensEncoded = encoded.replace(/\(/g, "%28").replace(/\)/g, "%29");
+  if (parensEncoded !== encoded && !variants.includes(parensEncoded)) {
+    variants.push(parensEncoded);
+  }
   return variants;
 }

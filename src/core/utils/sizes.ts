@@ -14,7 +14,14 @@ export function formatBytes(bytes: number): string {
     value /= 1024;
     unit += 1;
   }
-  const rounded = unit === 0 ? Math.round(value) : Math.round(value * 10) / 10;
+  let rounded = unit === 0 ? Math.round(value) : Math.round(value * 10) / 10;
+  // Rounding can push the value up to a full 1024 of its unit (e.g. 1048575 bytes
+  // → 1024 KB); carry into the next unit so it reads "1 MB", not "1024 KB".
+  if (rounded >= 1024 && unit < UNITS.length - 1) {
+    value /= 1024;
+    unit += 1;
+    rounded = Math.round(value * 10) / 10;
+  }
   return `${rounded} ${UNITS[unit]}`;
 }
 
