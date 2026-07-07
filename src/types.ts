@@ -188,6 +188,8 @@ export interface AttachmentManagerSettings {
   reclaimedTotalBytes: number;
   /** Whether we've already asked this user for a review (never re-ask). */
   reviewAsked: boolean;
+  /** Whether the free user has spent their one-time "first bulk cleanup" trial. */
+  bulkTrialUsed: boolean;
 }
 
 /** Just the knobs a scan needs; a profile can override these at run time. */

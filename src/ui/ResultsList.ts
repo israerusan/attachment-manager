@@ -220,9 +220,16 @@ function renderRow(
           .setTitle("Move to attachment folder")
           .setIcon("folder-input")
           .onClick(() => {
-            void plugin.bulkMoveToAttachmentFolder([issue]).then((c) => {
-              if (c.length) void plugin.settleCacheThenRescan(c);
-            });
+            plugin.confirmDestructive(
+              "Move to attachment folder",
+              `Move "${issue.attachmentName}" into "${plugin.settings.attachmentFolder.trim()}"? ` +
+                "Markdown, wikilink, and canvas links are updated; raw HTML <img src> and frontmatter path strings are not.",
+              "Move file",
+              () =>
+                void plugin.bulkMoveToAttachmentFolder([issue]).then((c) => {
+                  if (c.length) void plugin.settleCacheThenRescan(c);
+                })
+            );
           })
       );
     }

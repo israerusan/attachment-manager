@@ -528,6 +528,13 @@ button.attachment-manager-tile:hover {
   color: var(--text-success);
 }
 
+/* Free-trial hint in the bulk bar */
+.attachment-manager-trial-note {
+  color: var(--text-accent);
+  font-size: var(--font-ui-smaller);
+  margin-right: var(--size-4-2);
+}
+
 /* Confirm modal body (destructive actions) */
 .attachment-manager-confirm-body {
   margin-bottom: var(--size-4-3);

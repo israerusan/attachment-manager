@@ -38,6 +38,7 @@ export const DEFAULT_SETTINGS: AttachmentManagerSettings = {
   singleTrashCount: 0,
   reclaimedTotalBytes: 0,
   reviewAsked: false,
+  bulkTrialUsed: false,
 };
 
 /** Split a comma/newline separated field into trimmed, non-empty entries. */
@@ -168,7 +169,7 @@ export class AttachmentManagerSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Duplicate hashing size cap (MB)")
-      .setDesc("Skip hashing files larger than this when finding duplicates (protects memory).")
+      .setDesc("Skip hashing files larger than this when finding duplicates (protects memory). 0 turns duplicate hashing off.")
       .addText((t) =>
         t
           .setPlaceholder("50")

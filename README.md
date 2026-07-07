@@ -89,4 +89,4 @@ Everything runs locally in your vault. No network calls, no telemetry, no accoun
 
 [**Unlock Attachment Manager Pro — $9 one-time →**](https://buymeacoffee.com/attachmentmanager)
 
-One payment, yours forever. Offline license, no account.
+One payment — this version is yours forever. Offline license, no account.

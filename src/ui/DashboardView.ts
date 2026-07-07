@@ -405,13 +405,24 @@ export class AttachmentManagerView extends ItemView {
 
     const bulk = bar.createEl("button", { text: this.bulkMode ? "Exit bulk" : "Bulk actions" });
     if (!this.bulkMode && !this.plugin.isPro) {
-      bulk.createSpan({ cls: "attachment-manager-pro-pill", text: "Pro" });
+      // Advertise the one-time free trial until it's spent, then the Pro gate.
+      const label = this.plugin.settings.bulkTrialUsed ? "Pro" : "Free trial";
+      bulk.createSpan({ cls: "attachment-manager-pro-pill", text: label });
     }
     bulk.addEventListener("click", () => {
       if (this.bulkMode) {
         this.bulkMode = false;
         this.selected.clear();
         this.render();
+        return;
+      }
+      const enterBulk = (): void => {
+        this.bulkMode = true;
+        this.render();
+      };
+      // Pro, or a user who hasn't spent their free bulk trial, enters directly.
+      if (this.plugin.isPro || !this.plugin.settings.bulkTrialUsed) {
+        enterBulk();
         return;
       }
       const outstanding = this.plugin.visibleIssues().filter((i) => !this.plugin.isReviewed(i));
@@ -421,20 +432,18 @@ export class AttachmentManagerView extends ItemView {
         unusedCount > 0
           ? `Clear all ${unusedCount} unused file${unusedCount === 1 ? "" : "s"} (${formatBytes(r.unusedBytes)}) in one click — plus dedupe, move, and rename across many files at once.`
           : undefined;
-      requirePro(
-        this.plugin,
-        "bulk",
-        () => {
-          this.bulkMode = true;
-          this.render();
-        },
-        ctx
-      );
+      requirePro(this.plugin, "bulk", enterBulk, ctx);
     });
   }
 
   private renderBulkBar(root: HTMLElement): void {
     const bar = root.createDiv({ cls: "attachment-manager-bulk-bar" });
+    if (!this.plugin.isPro && !this.plugin.settings.bulkTrialUsed) {
+      bar.createSpan({
+        cls: "attachment-manager-trial-note",
+        text: "Free trial: your first bulk cleanup is on us.",
+      });
+    }
     this.selCountEl = bar.createSpan({ text: `${this.selected.size} selected` });
     this.bulkActionButtons = [];
 
@@ -507,8 +516,8 @@ export class AttachmentManagerView extends ItemView {
       }
       this.plugin.confirmDestructive(
         "Move to attachment folder",
-        `Move ${sel.length} selected file(s) into "${folder}"? Links in notes are updated; ` +
-          "files already there are skipped.",
+        `Move ${sel.length} selected file(s) into "${folder}"? Markdown, wikilink, and canvas links are ` +
+          "updated; raw HTML <img src> and frontmatter path strings are not. Files already there are skipped.",
         "Move files",
         () => void this.plugin.bulkMoveToAttachmentFolder(sel).then((c) => this.afterBulkMutate(c))
       );
@@ -536,6 +545,14 @@ export class AttachmentManagerView extends ItemView {
   private afterBulkMutate(changed: string[]): void {
     this.selected.clear();
     this.bulkMode = false;
+    // A successful bulk action spends the one-time free trial (for free users).
+    if (changed.length > 0 && !this.plugin.isPro && !this.plugin.settings.bulkTrialUsed) {
+      this.plugin.settings.bulkTrialUsed = true;
+      this.plugin.queueSave();
+      new Notice(
+        "That was your free bulk cleanup — Attachment Manager Pro unlocks unlimited one-click cleanup."
+      );
+    }
     if (changed.length === 0) {
       this.render();
       return;

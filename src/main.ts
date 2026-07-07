@@ -20,7 +20,12 @@ import { DEFAULT_SETTINGS, AttachmentManagerSettingTab } from "./settings";
 import { AttachmentManagerView, VIEW_TYPE_ATTACHMENT_MANAGER } from "./ui/DashboardView";
 import { ReviewQueueModal } from "./ui/ReviewQueueModal";
 import { ConfirmModal } from "./ui/ConfirmModal";
-import { scanVault, resolveScanConfig, buildInboundCounts } from "./core/scan/scanVault";
+import {
+  scanVault,
+  resolveScanConfig,
+  buildInboundCounts,
+  findMentionedAttachments,
+} from "./core/scan/scanVault";
 import { countByType } from "./core/rules/severity";
 import { computeReclaim } from "./core/reclaim/reclaimableSpace";
 import { buildMarkdownReport } from "./core/reports/markdownReport";
@@ -309,14 +314,18 @@ export default class AttachmentManagerPlugin extends Plugin {
       if (!profileId) this.pruneKeys();
       await this.saveSettings();
 
-      const affected = new Set(outstanding.map((i) => i.attachmentPath)).size;
-      const reclaimText = outstandingReclaim.unusedBytes > 0
-        ? ` — ${formatBytes(outstandingReclaim.unusedBytes)} reclaimable`
-        : "";
-      new Notice(
-        `${PRODUCT_NAME}: scanned ${totalFiles} ${plural(totalFiles, "attachment")} — ` +
-          `${outstanding.length} ${plural(outstanding.length, "issue")} in ${affected} ${plural(affected, "file")}${reclaimText}.`
-      );
+      if (config.enabledIssueTypes.length === 0) {
+        new Notice(`${PRODUCT_NAME}: no detectors are enabled — turn some on in settings.`);
+      } else {
+        const affected = new Set(outstanding.map((i) => i.attachmentPath)).size;
+        const reclaimText = outstandingReclaim.unusedBytes > 0
+          ? ` — ${formatBytes(outstandingReclaim.unusedBytes)} reclaimable`
+          : "";
+        new Notice(
+          `${PRODUCT_NAME}: scanned ${totalFiles} ${plural(totalFiles, "attachment")} — ` +
+            `${outstanding.length} ${plural(outstanding.length, "issue")} in ${affected} ${plural(affected, "file")}${reclaimText}.`
+        );
+      }
     } catch (err) {
       console.error("Attachment Manager: scan failed", err);
       new Notice(`${PRODUCT_NAME}: scan failed. See the console for details.`);
@@ -608,14 +617,24 @@ export default class AttachmentManagerPlugin extends Plugin {
     const inbound = this.inboundMap();
     const unused = this.unusedPathSet();
     const bytesByPath = new Map(issues.map((i) => [i.attachmentPath, i.sizeBytes]));
+    const nameByPath = new Map(issues.map((i) => [i.attachmentPath, i.attachmentName]));
+    // Re-check the SECOND signal (content mention) live, so a canvas/HTML/
+    // frontmatter reference added since the scan can't get a file trashed.
+    const candidatePaths = unique(issues.map((i) => i.attachmentPath)).filter(
+      (p) => this.app.vault.getFileByPath(p) !== null && (inbound.get(p) ?? 0) <= 0 && unused.has(p)
+    );
+    const mentioned = await findMentionedAttachments(
+      this.app,
+      candidatePaths.map((p) => ({ path: p, name: nameByPath.get(p) ?? attachmentBaseName(p) }))
+    );
     const trashed: string[] = [];
     let skipped = 0;
     let failed = 0;
     for (const path of unique(issues.map((i) => i.attachmentPath))) {
       const file = this.app.vault.getFileByPath(path);
       if (!file) { skipped++; continue; }
-      // Skip anything newly referenced or not confirmed unused by the last scan.
-      if ((inbound.get(path) ?? 0) > 0 || !unused.has(path)) { skipped++; continue; }
+      // Skip anything newly referenced (by link OR content) or not confirmed unused.
+      if ((inbound.get(path) ?? 0) > 0 || !unused.has(path) || mentioned.has(path)) { skipped++; continue; }
       try {
         await this.app.fileManager.trashFile(file);
         trashed.push(path);
@@ -681,13 +700,19 @@ export default class AttachmentManagerPlugin extends Plugin {
       return [];
     }
 
+    const nameByPath = new Map(selected.map((i) => [i.attachmentPath, i.attachmentName]));
+    // Live second-signal re-check before trashing any copy.
+    const mentioned = await findMentionedAttachments(
+      this.app,
+      unique(toTrash).map((p) => ({ path: p, name: nameByPath.get(p) ?? attachmentBaseName(p) }))
+    );
     const trashed: string[] = [];
     let skipped = 0;
     let failed = 0;
     for (const path of unique(toTrash)) {
       const file = this.app.vault.getFileByPath(path);
       if (!file) { skipped++; continue; }
-      if ((inbound.get(path) ?? 0) > 0 || !unused.has(path)) { skipped++; continue; }
+      if ((inbound.get(path) ?? 0) > 0 || !unused.has(path) || mentioned.has(path)) { skipped++; continue; }
       try {
         await this.app.fileManager.trashFile(file);
         trashed.push(path);

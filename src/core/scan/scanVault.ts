@@ -119,10 +119,15 @@ export async function scanVault(
   // another file and are under the memory cap — most files are never read.
   let hashToPaths = new Map<string, string[]>();
   if (enabled.has("duplicate")) {
+    // A cap of 0 (or less) disables duplicate hashing entirely — matching the
+    // "skip files larger than this" setting, where 0 means "skip everything".
     const cap = kbToBytes(config.duplicateMaxScanKb);
-    const collide = sizeCollisionCandidates(
-      inputs.map((inp, idx) => ({ path: inp.path, size: inp.size, idx }))
-    ).filter((c) => cap <= 0 || c.size <= cap);
+    const collide =
+      cap <= 0
+        ? []
+        : sizeCollisionCandidates(
+            inputs.map((inp, idx) => ({ path: inp.path, size: inp.size, idx }))
+          ).filter((c) => c.size <= cap);
     const idxByPath = new Map(collide.map((c) => [c.path, c.idx]));
     const fileByPath = new Map(candidates.map((f) => [f.path, f]));
 
@@ -222,6 +227,59 @@ export async function scanVault(
 
   const sorted = sortIssues(issues, config.sortMode);
   return { issues: sorted, totalFiles, reclaim: computeReclaim(sorted) };
+}
+
+/**
+ * Which of the given attachments are currently mentioned anywhere in the vault's
+ * source content (note bodies incl. frontmatter, canvas `file` values, text
+ * attachments). This is the SECOND unused-safety signal, re-checkable at
+ * action time — because a canvas/HTML/frontmatter reference added after the last
+ * scan never appears in `resolvedLinks`, destructive actions call this to avoid
+ * trashing a file that became referenced since the scan. If any source can't be
+ * read, every candidate is reported as mentioned (fail safe: don't trash).
+ */
+export async function findMentionedAttachments(
+  app: App,
+  candidates: { path: string; name: string }[]
+): Promise<Set<string>> {
+  const mentioned = new Set<string>();
+  if (candidates.length === 0) return mentioned;
+
+  const matcher = new MentionMatcher();
+  candidates.forEach((c, idx) => {
+    for (const variant of fileNameVariants(c.name)) matcher.addPattern(variant, idx);
+  });
+  matcher.build();
+
+  const inReports = (p: string): boolean => p === REPORT_FOLDER || p.startsWith(REPORT_FOLDER + "/");
+  const sources = app.vault
+    .getFiles()
+    .filter((f) => !inReports(f.path) && isMentionSource(f.extension.toLowerCase()));
+
+  const hits = new Set<number>();
+  let readFailed = false;
+  for (let i = 0; i < sources.length; i += READ_BATCH) {
+    const batch = sources.slice(i, i + READ_BATCH);
+    const texts = await Promise.all(
+      batch.map((s) =>
+        readSourceText(app, s).catch(() => {
+          readFailed = true;
+          return "";
+        })
+      )
+    );
+    for (const text of texts) if (text) matcher.scanInto(text.toLowerCase(), hits);
+  }
+
+  // A source we couldn't read might contain the only reference — never trash then.
+  if (readFailed) {
+    for (const c of candidates) mentioned.add(c.path);
+    return mentioned;
+  }
+  candidates.forEach((c, idx) => {
+    if (hits.has(idx)) mentioned.add(c.path);
+  });
+  return mentioned;
 }
 
 /** SHA-256 hex of a file's bytes, via the Web Crypto API (available at runtime). */
