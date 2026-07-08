@@ -1,14 +1,12 @@
 # Attachment Audit
 
-**The safest way to find attachment bloat before you delete a damn thing.**
+**Safe attachment cleanup with evidence, not guesswork.**
 
 Attachment Audit scans your vault for truly unused attachments, duplicates, oversized files, junk-named pastes, and misplaced files — then shows exactly what is reclaimable before you touch anything.
 
 Free lets you scan and clean one file at a time. Pro unlocks bulk cleanup, saved scan profiles, custom rules, severity tuning, and Markdown reports.
 
 > Built for the moment when "I think these files are junk" is not good enough and you want evidence before you start deleting.
-
-<!-- TODO: screenshot — dashboard with reclaimable-space hero -->
 
 ## Why Attachment Audit exists
 
@@ -93,12 +91,31 @@ Attachment Audit touches files, so safety is the whole business model:
 
 Attachment Audit Pro uses an offline license key.
 
-- one-time purchase model
+- one-time payment
 - no account required
 - no always-online checks
 - validated locally in your vault
 
 Pro is for people who want to reclaim space in batches instead of babysitting one file at a time.
+
+## Buy Pro
+
+Attachment Audit Pro uses an offline license key and a one-time payment.
+
+What you get:
+- bulk cleanup across many files
+- saved scan profiles
+- custom rules
+- severity tuning
+- Markdown report export
+
+Current delivery model:
+- one-time purchase
+- no account required
+- offline license verification
+- license key delivered manually by the author after purchase
+
+Current sales are fulfilled manually by the author and delivered as offline license keys. Replace this with instant checkout before you try to scale paid distribution.
 
 ## Privacy
 

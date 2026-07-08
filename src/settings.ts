@@ -266,7 +266,7 @@ export class AttachmentManagerSettingTab extends PluginSettingTab {
       .setName("License key")
       .setDesc(
         this.plugin.licenseError ??
-          "After purchase your key arrives by email. Paste it here to unlock all Pro features."
+          "After purchase, paste your license key here to unlock all Pro features. See the Buy Pro section in the repo for current purchase and delivery details."
       )
       .addText((t) =>
         t
@@ -295,7 +295,7 @@ export class AttachmentManagerSettingTab extends PluginSettingTab {
         })
     );
     actions.controlEl.createEl("a", {
-      text: "Get Pro",
+      text: "Buy Pro info",
       cls: "attachment-audit-external-btn",
       href: PURCHASE_URL,
     });
